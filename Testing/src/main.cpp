@@ -1,17 +1,12 @@
 ///////////////////////////////CONNECT SECTION/////////////////////////////
-
-#include <Wire.h> // apparently the most important shit idk arduino too yeah
+#include <Wire.h> // apparently the most important thing idk arduino too yeah
 #include <Arduino.h>// Include the Arduino Stepper Library
 #include <Stepper.h> // stepper motor
 #include <Encoder.h> // encoder
 #include <LedControl.h> //maxon
 #include <LiquidCrystal_I2C.h> //lcd
-
-
-
-
+#include <Keypad.h>
 /////////////////////MAXON SECTION//////////////////////
-
 int DIN = 10;
 int CS = 9;
 int LCLK = 8;
@@ -28,10 +23,7 @@ void printByte(byte character[])
     lc.setRow(0, i, character[i]);
   }
 }
-
-
 //////////////////LCD I2C SECTION////////////////////
-
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 void movementCenter()
 {
@@ -46,6 +38,7 @@ void movementLeft()
   lcd.print("Movement to");
   lcd.setCursor(1, 1);   
   lcd.print("the left");
+  lcd.clear();
 }
 void movementRight()
 {
@@ -53,66 +46,64 @@ void movementRight()
   lcd.print("Movement to");
   lcd.setCursor(1, 1);
   lcd.print("the right");
+  lcd.clear();
 }
 void movementCenterDone()
 {
   lcd.setCursor(1, 0);
   lcd.print("SUCCESS");
-  lcd.setCursor(1, 1);
-  lcd.print("");
 }
-
-
+///////////////////MAXON + LSD////////////////////////
+void clearM_L()
+{
+  lc.clearDisplay(0); // clear maxon display
+  lcd.clear(); // clear lcd display
+}
 ////////////////STEPPER SECTION////////////////////////
-
 const int stepsPerRevolution = 200; // number of steps per output rotation
 Stepper myStepper(stepsPerRevolution, 4, 5, 6, 7);
-
 #define S1 11
 #define S2 12
-
 int prevS1;
 int curS1, curS2;
-
 int val = 0;
-
-
-
+////////////////KEYPAD SECTION/////////////////////////
+const byte ROWS = 4;   // Row quantity
+const byte COLS = 4;   // Strokes quantity
+char keys[ROWS][COLS] =
+{
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+byte rowPins[ROWS] = {23, 25, 27, 20}; // pins for rows
+byte colPins[COLS] = {31, 33, 35, 37}; // pins for cols
 //////////////////////////////////////GENERAL SECTION//////////////////////////////////////////////////
-
-
-
-
-
 /////////////////VOID SETUP////////////////////////
 void setup()
 {
-  lcd.init();
-  lcd.backlight();
-  /*lc.shutdown(0, false);  //the maxon is in power-saving mode on startup
+  lcd.init(); //init lcd 1602
+  lcd.backlight(); //turn backlight on
+  lcd.display(); // display in power mode
+  lc.shutdown(0, false);  //the maxon is in power-saving mode on startup
   lc.setIntensity(0, 15); //set the brightness of maxon to maximum value
-  lc.clearDisplay(0);     //and clear the display*/
-	// set the speed at 60 rpm:
-	myStepper.setSpeed(60);
-	// initialize the serial port:
-	Serial.begin(9600);
-	pinMode (S1, INPUT);
+  lc.clearDisplay(0); // clear maxon display
+  // set the speed at 60 rpm:
+  myStepper.setSpeed(60);
+  // initialize the serial port:
+  Serial.begin(9600);
+  pinMode (S1, INPUT);
   pinMode (S2, INPUT);
-
   prevS1 = digitalRead(S1);
 }
-
-
 //////////////////////////VOID LOOP/////////////////////////////
-
 void loop()
 {
-
+  // encoder code
   curS1 = digitalRead(S1);
-
   if (curS2!=curS1) {
     curS2 = digitalRead(S2);
-
     if(curS2 == curS1){
       val++;
     }
@@ -122,11 +113,8 @@ void loop()
     Serial.print("Value = ");
     Serial.println(val);
   }
-
   prevS1=curS1;
-  
   bool flag;
-
   if(curS1!=prevS1){
     curS2 = digitalRead(S2);
     if(flag){
@@ -145,41 +133,25 @@ void loop()
     }
   }
   prevS1=curS1;
-
-  // init displays
-  lcd.print(millis() / 1000); 
-  lcd.display();
-  lc.shutdown(0, false);  //the maxon is in power-saving mode on startup
-  lc.setIntensity(0, 15); //set the brightness of maxon to maximum value
-  lc.clearDisplay(0);     //and clear the display
-  
-  // movement to the center 
-  movementCenter();
+  //main actions
+  /*movementCenter();
   printByte(center);
   delay(1500);
-
-	// step one revolution in one direction:
-  movementLeft();
-  printByte(leftArrow);
-	myStepper.step(stepsPerRevolution);
-	delay(1500);
-
-	// step one revolution in the other direction:
+  clearM_L();*/
   movementRight();
   printByte(rightArrow);
-	myStepper.step(-stepsPerRevolution);
-	delay(1500);
-
-  // we are done 
-  movementCenterDone();
+  myStepper.step(stepsPerRevolution);
+  delay(1500);
+  clearM_L();
+  movementLeft();
+  printByte(leftArrow);
+  myStepper.step(-stepsPerRevolution);
+  delay(1500);
+  clearM_L();
+  /*movementCenterDone();
   printByte(center);
   delay(1500);
   printByte(smile);
-  delay(1500);
-
+  clearM_L();*/
 }
-
-
-
-
 ///////////////////////////////////////END GENERAL SECTION//////////////////////////////////////////////////////
